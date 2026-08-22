@@ -1,0 +1,432 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+  --color-high: var(--high);
+  --color-high-foreground: var(--high-foreground);
+  --color-medium: var(--medium);
+  --color-medium-foreground: var(--medium-foreground);
+  --color-low: var(--low);
+  --color-low-foreground: var(--low-foreground);
+  --color-resolved: var(--resolved);
+  --color-resolved-foreground: var(--resolved-foreground);
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+}
+
+:root {
+  color-scheme: dark;
+  --background: oklch(0.17 0.018 255);
+  --foreground: oklch(0.97 0.005 250);
+  --card: oklch(0.21 0.02 255);
+  --card-foreground: oklch(0.97 0.005 250);
+  --popover: oklch(0.2 0.02 255);
+  --popover-foreground: oklch(0.97 0.005 250);
+  --primary: oklch(0.78 0.13 195);
+  --primary-foreground: oklch(0.19 0.03 235);
+  --secondary: oklch(0.27 0.022 255);
+  --secondary-foreground: oklch(0.95 0.005 250);
+  --muted: oklch(0.25 0.02 255);
+  --muted-foreground: oklch(0.68 0.02 250);
+  --accent: oklch(0.29 0.03 250);
+  --accent-foreground: oklch(0.97 0.005 250);
+  --destructive: oklch(0.63 0.21 25);
+  --border: oklch(1 0 0 / 9%);
+  --input: oklch(1 0 0 / 12%);
+  --ring: oklch(0.78 0.13 195);
+  --high: oklch(0.64 0.22 24);
+  --high-foreground: oklch(0.98 0.01 20);
+  --medium: oklch(0.73 0.16 55);
+  --medium-foreground: oklch(0.2 0.04 55);
+  --low: oklch(0.82 0.14 90);
+  --low-foreground: oklch(0.28 0.05 90);
+  --resolved: oklch(0.72 0.15 158);
+  --resolved-foreground: oklch(0.2 0.04 158);
+  --chart-1: oklch(0.78 0.13 195);
+  --chart-2: oklch(0.64 0.22 24);
+  --chart-3: oklch(0.73 0.16 55);
+  --chart-4: oklch(0.82 0.14 90);
+  --chart-5: oklch(0.72 0.15 158);
+  --radius: 0.75rem;
+  --sidebar: oklch(0.19 0.02 255);
+  --sidebar-foreground: oklch(0.97 0.005 250);
+  --sidebar-primary: oklch(0.78 0.13 195);
+  --sidebar-primary-foreground: oklch(0.19 0.03 235);
+  --sidebar-accent: oklch(0.27 0.022 255);
+  --sidebar-accent-foreground: oklch(0.97 0.005 250);
+  --sidebar-border: oklch(1 0 0 / 9%);
+  --sidebar-ring: oklch(0.78 0.13 195);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+@layer utilities {
+  .bg-grid {
+    background-image: linear-gradient(
+        to right,
+        color-mix(in oklch, var(--foreground) 4%, transparent) 1px,
+        transparent 1px
+      ),
+      linear-gradient(
+        to bottom,
+        color-mix(in oklch, var(--foreground) 4%, transparent) 1px,
+        transparent 1px
+      );
+    background-size: 44px 44px;
+  }
+
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+@keyframes ai-orbit {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes ai-pulse-ring {
+  0% {
+    transform: scale(0.9);
+    opacity: 0.7;
+  }
+  70% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes ai-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes ai-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.25;
+  }
+}
+
+@keyframes ai-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes ai-draw-line {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+
+.animate-ai-orbit {
+  animation: ai-orbit 8s linear infinite;
+}
+.animate-ai-blink {
+  animation: ai-blink 1.4s ease-in-out infinite;
+}
+.animate-ai-rise {
+  animation: ai-rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.animate-ai-pulse-ring {
+  animation: ai-pulse-ring 2.4s ease-out infinite;
+}
+
+.ai-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+.ai-shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in oklch, var(--primary) 22%, transparent),
+    transparent
+  );
+  animation: ai-shimmer 1.8s ease-in-out infinite;
+}
+
+
+/* Thunderstorm background effect */
+.campus-storm-shell {
+  position: relative;
+  isolation: isolate;
+  min-height: 100vh;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 72% 8%, color-mix(in oklch, #8b5cf6 22%, transparent), transparent 30%),
+    radial-gradient(circle at 18% 35%, color-mix(in oklch, #2563eb 14%, transparent), transparent 34%),
+    linear-gradient(180deg, #080b18 0%, #0b1020 48%, #070a13 100%);
+}
+
+.campus-storm-shell::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -3;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 15% 4%, rgba(18, 24, 48, .95) 0 18%, transparent 42%),
+    radial-gradient(ellipse at 52% 0%, rgba(28, 24, 58, .9) 0 20%, transparent 46%),
+    radial-gradient(ellipse at 88% 6%, rgba(16, 21, 45, .98) 0 17%, transparent 40%);
+  filter: blur(8px);
+}
+
+.campus-storm-shell::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  background:
+    linear-gradient(115deg, transparent 0 64%, rgba(93, 66, 255, .06) 66%, transparent 69%),
+    repeating-linear-gradient(112deg, transparent 0 34px, rgba(125, 150, 255, .035) 35px, transparent 36px 72px);
+  opacity: .7;
+}
+
+.thunder-lightning {
+  position: absolute;
+  z-index: -1;
+  top: -3%;
+  width: 180px;
+  height: 72vh;
+  pointer-events: none;
+  opacity: 0;
+  filter: drop-shadow(0 0 5px rgba(167, 139, 250, .95)) drop-shadow(0 0 22px rgba(99, 102, 241, .75));
+  clip-path: polygon(46% 0, 62% 0, 55% 18%, 72% 18%, 48% 40%, 62% 40%, 29% 72%, 42% 72%, 7% 100%, 23% 67%, 8% 67%, 40% 35%, 26% 35%);
+  background: linear-gradient(180deg, #ffffff 0%, #c4b5fd 35%, #8b5cf6 70%, rgba(99,102,241,.1) 100%);
+  animation: thunder-strike 7s infinite;
+}
+
+.thunder-lightning.one { left: 58%; transform: rotate(7deg); }
+.thunder-lightning.two { left: 78%; top: -10%; transform: scale(.72) rotate(-5deg); animation-delay: 3.4s; }
+.thunder-lightning.three { left: 34%; top: -8%; transform: scale(.48) rotate(12deg); animation-delay: 5.2s; }
+
+.thunder-flash {
+  position: absolute;
+  inset: 0;
+  z-index: -4;
+  pointer-events: none;
+  background: rgba(173, 156, 255, .18);
+  opacity: 0;
+  animation: thunder-flash 7s infinite;
+}
+
+@keyframes thunder-strike {
+  0%, 55%, 100% { opacity: 0; }
+  56% { opacity: .05; }
+  56.4% { opacity: 1; }
+  57% { opacity: .12; }
+  57.25% { opacity: .9; }
+  58% { opacity: 0; }
+}
+
+@keyframes thunder-flash {
+  0%, 55%, 100% { opacity: 0; }
+  56.35% { opacity: .35; }
+  56.7% { opacity: 0; }
+  57.2% { opacity: .16; }
+  58% { opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .thunder-lightning, .thunder-flash { animation: none; opacity: 0; }
+}
+
+
+/* Advanced Campus Commander atmosphere */
+.storm-atmosphere {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.storm-aurora {
+  position: absolute;
+  inset: -25% -10%;
+  background:
+    radial-gradient(ellipse at 20% 30%, rgba(34, 211, 238, .10), transparent 30%),
+    radial-gradient(ellipse at 78% 18%, rgba(168, 85, 247, .16), transparent 32%),
+    radial-gradient(ellipse at 55% 72%, rgba(59, 130, 246, .08), transparent 34%);
+  filter: blur(35px);
+  animation: storm-aurora-drift 16s ease-in-out infinite alternate;
+}
+
+.storm-fog {
+  position: absolute;
+  inset: 25% -15% -10%;
+  background:
+    radial-gradient(ellipse at 18% 70%, rgba(125, 211, 252, .08), transparent 28%),
+    radial-gradient(ellipse at 72% 58%, rgba(167, 139, 250, .10), transparent 30%),
+    linear-gradient(90deg, transparent, rgba(255,255,255,.025), transparent);
+  filter: blur(28px);
+  opacity: .75;
+  animation: storm-fog-drift 22s ease-in-out infinite alternate;
+}
+
+.storm-rain {
+  position: absolute;
+  inset: -20% -10%;
+  opacity: .28;
+  background-image: repeating-linear-gradient(
+    108deg,
+    transparent 0 20px,
+    rgba(147, 197, 253, .16) 21px,
+    transparent 22px 48px
+  );
+  background-size: 100px 130px;
+  transform: rotate(-2deg);
+  animation: storm-rain-fall .9s linear infinite;
+  mask-image: linear-gradient(to bottom, transparent, #000 18%, #000 78%, transparent);
+}
+
+.storm-particles {
+  position: absolute;
+  inset: 0;
+  opacity: .42;
+  background-image:
+    radial-gradient(circle, rgba(255,255,255,.65) 0 1px, transparent 1.5px),
+    radial-gradient(circle, rgba(103,232,249,.5) 0 1px, transparent 1.5px),
+    radial-gradient(circle, rgba(192,132,252,.5) 0 1px, transparent 1.5px);
+  background-size: 83px 97px, 137px 151px, 191px 173px;
+  background-position: 0 0, 35px 62px, 90px 25px;
+  animation: storm-particle-drift 18s linear infinite;
+}
+
+.storm-hud-grid {
+  position: absolute;
+  inset: 0;
+  opacity: .20;
+  background-image:
+    linear-gradient(rgba(125, 211, 252, .055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(168, 85, 247, .055) 1px, transparent 1px);
+  background-size: 54px 54px;
+  mask-image: radial-gradient(ellipse at center, #000 15%, transparent 80%);
+  animation: storm-grid-pulse 6s ease-in-out infinite;
+}
+
+.storm-vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at center, transparent 45%, rgba(2, 4, 12, .58) 100%);
+}
+
+@keyframes storm-aurora-drift {
+  0% { transform: translate3d(-2%, -1%, 0) scale(1); }
+  100% { transform: translate3d(3%, 2%, 0) scale(1.08); }
+}
+
+@keyframes storm-fog-drift {
+  0% { transform: translateX(-4%) scale(1); }
+  100% { transform: translateX(5%) scale(1.08); }
+}
+
+@keyframes storm-rain-fall {
+  from { transform: translate3d(-2%, -8%, 0) rotate(-2deg); }
+  to { transform: translate3d(3%, 8%, 0) rotate(-2deg); }
+}
+
+@keyframes storm-particle-drift {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(18px, 32px, 0); }
+}
+
+@keyframes storm-grid-pulse {
+  0%, 100% { opacity: .12; }
+  50% { opacity: .26; }
+}
+
+/* Premium glass + electric hover treatment */
+.campus-storm-shell .border-border\/70 {
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.035), 0 8px 35px rgba(0,0,0,.16);
+}
+
+.campus-storm-shell button,
+.campus-storm-shell a {
+  transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease, background-color .25s ease;
+}
+
+.campus-storm-shell button:hover,
+.campus-storm-shell a:hover {
+  filter: brightness(1.08);
+}
+
+.campus-storm-shell .bg-card\/50:hover,
+.campus-storm-shell .bg-card\/60:hover {
+  box-shadow: 0 0 28px color-mix(in oklch, var(--primary) 10%, transparent), inset 0 1px 0 rgba(255,255,255,.05);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .storm-aurora, .storm-fog, .storm-rain, .storm-particles, .storm-hud-grid { animation: none; }
+}

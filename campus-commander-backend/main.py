@@ -3,13 +3,17 @@ main.py -- Stage 5: FastAPI REST API
 
 Endpoints:
     POST /agent/run                     -- submit a goal, start agent in background
+    POST /agent/analyze-image           -- analyze an uploaded facility/equipment photo via Gemini Vision
     GET  /agent/task/{task_id}          -- poll task status + outcome
     GET  /agent/task/{task_id}/events   -- stream-poll agent events (grows during execution)
+    GET  /reporters                     -- get all seeded reporters
+    GET  /health                        -- liveness check
 
 Architecture:
     - FastAPI BackgroundTasks runs run_agent() asynchronously.
     - Task state is persisted in the SQLite `tasks` table.
     - Agent events are persisted in `agent_events` as they happen.
+    - Gemini Vision analyzes facility photos securely on backend without frontend API key exposure.
     - No WebSockets, SSE, Celery, Redis, or Kafka.
 """
 
@@ -17,10 +21,10 @@ import asyncio
 import json
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Optional
 
 from dotenv import load_dotenv
-from fastapi import BackgroundTasks, FastAPI, HTTPException
+from fastapi import BackgroundTasks, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, field_validator
 
@@ -28,6 +32,7 @@ load_dotenv()
 
 from database import get_connection, init_db
 from seed import run_seed
+from vision import analyze_facility_image, synthesize_combined_goal
 
 # ---------------------------------------------------------------------------
 # Application startup
@@ -108,6 +113,11 @@ class EventItem(BaseModel):
 class EventsResponse(BaseModel):
     task_id: int
     events: list[EventItem]
+
+
+class AnalyzeImageResponse(BaseModel):
+    analysis: dict[str, Any]
+    combined_goal: str
 
 
 # ---------------------------------------------------------------------------
@@ -224,6 +234,47 @@ def run_agent_endpoint(
     )
     return RunResponse(task_id=task_id, status="running")
 
+
+@app.post("/agent/analyze-image", response_model=AnalyzeImageResponse)
+async def analyze_image_endpoint(
+    file: UploadFile = File(...),
+    user_text: Optional[str] = Form(None),
+) -> AnalyzeImageResponse:
+    """
+    Analyze an uploaded facility/equipment photo using Gemini Vision on the backend.
+    Returns structured analysis and a synthesized combined goal for /agent/run.
+    """
+    mime_type = file.content_type or "image/jpeg"
+    if mime_type not in {"image/jpeg", "image/png", "image/webp"}:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported image format '{mime_type}'. Supported formats: JPEG, PNG, WebP.",
+        )
+
+    try:
+        image_bytes = await file.read()
+        if len(image_bytes) > 10 * 1024 * 1024:
+            raise HTTPException(
+                status_code=400,
+                detail="Image file size exceeds the maximum 10MB limit.",
+            )
+
+        analysis = analyze_facility_image(image_bytes, mime_type, user_text)
+        combined_goal = synthesize_combined_goal(user_text, analysis)
+
+        return AnalyzeImageResponse(
+            analysis=analysis,
+            combined_goal=combined_goal,
+        )
+    except HTTPException:
+        raise
+    except ValueError as val_err:
+        raise HTTPException(status_code=400, detail=str(val_err))
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Image analysis failed: {exc}",
+        )
 
 
 @app.get("/agent/task/{task_id}", response_model=TaskResponse)
