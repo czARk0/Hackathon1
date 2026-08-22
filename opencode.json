@@ -1,0 +1,12 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "providers": {
+    "omniroute": {
+      "name": "OmniRoute",
+      "package": "@opencode-ai/ai/providers/openai-compatible",
+      "settings": {
+        "baseURL": "http://localhost:20128/v1"
+      }
+    }
+  }
+}
