@@ -248,6 +248,108 @@ def get_plan(user_goal: str) -> dict:
     return plan
 
 
+# ---------------------------------------------------------------------------
+# Stage 1B — Intent Classification
+# ---------------------------------------------------------------------------
+INTENT_SYSTEM_PROMPT = """You are the intent classification and assistance engine for Campus Commander, an autonomous AI system for campus facility operations.
+Analyze the user's input and classify it into one of three categories:
+
+1. "MAINTENANCE_REQUEST"
+   The user is reporting an actionable physical equipment, facility, or classroom issue that requires facility maintenance or technician attention (e.g. broken projector, malfunctioning AC, leaking pipe, light bulb replacement, damaged furniture, etc.).
+   Examples:
+   - "The projector in Lab 3 isn't working. Presentation tomorrow 10am."
+   - "AC is leaking water in Room 204."
+   - "The whiteboard is coming loose from the wall."
+
+2. "GENERAL_QUERY"
+   The user is asking a general question, campus location/directions inquiry, schedule, facility hours, greeting, or information lookup without reporting an actionable equipment failure.
+   Examples:
+   - "Where is Lab 3?"
+   - "Who is the AV technician?"
+   - "What are library hours?"
+   - "Hello, what can you do?"
+
+3. "OUT_OF_SCOPE"
+   The input is completely unrelated to campus facilities or operations, spam, or nonsense.
+
+Return ONLY a valid JSON object:
+{
+  "intent": "MAINTENANCE_REQUEST" | "GENERAL_QUERY" | "OUT_OF_SCOPE",
+  "confidence": 0.95,
+  "reason": "<brief rationale>",
+  "direct_response": "<If GENERAL_QUERY or OUT_OF_SCOPE, provide a direct, helpful, concise answer to the user (for example, for 'Where is Lab 3?', answer based on typical campus info such as 'Lab 3 is located in the Science & Technology Building, 2nd Floor, Room 203.'). If MAINTENANCE_REQUEST, leave as empty string ''>"
+}
+"""
+
+
+def classify_intent(user_goal: str) -> dict:
+    """
+    Classify user goal intent into MAINTENANCE_REQUEST, GENERAL_QUERY, or OUT_OF_SCOPE.
+    Returns a dict with keys: 'intent', 'confidence', 'reason', 'direct_response'.
+    """
+    api_key = os.getenv("GEMINI_API_KEY")
+    model_name = os.getenv("GEMINI_MODEL")
+
+    if not api_key:
+        raise EnvironmentError(
+            "GEMINI_API_KEY is not set. "
+            "Copy .env.example to .env and fill in your key."
+        )
+    if not model_name:
+        raise EnvironmentError(
+            "GEMINI_MODEL is not set. "
+            "Copy .env.example to .env and specify the model name."
+        )
+
+    client = genai.Client(api_key=api_key)
+
+    candidate_models = [model_name]
+    for fallback in ("gemini-3.5-flash-lite", "gemini-3.7-flash", "gemini-3.5-flash"):
+        if fallback not in candidate_models:
+            candidate_models.append(fallback)
+
+    last_exc = None
+    raw_text = None
+    for m in candidate_models:
+        try:
+            response = client.models.generate_content(
+                model=m,
+                contents=user_goal,
+                config=types.GenerateContentConfig(
+                    system_instruction=INTENT_SYSTEM_PROMPT,
+                    temperature=0.0,
+                    response_mime_type="application/json",
+                ),
+            )
+            raw_text = response.text
+            break
+        except Exception as exc:
+            last_exc = exc
+            continue
+
+    if raw_text is None:
+        return {
+            "intent": "MAINTENANCE_REQUEST",
+            "confidence": 0.5,
+            "reason": f"Fallback due to API error: {last_exc}",
+            "direct_response": "",
+        }
+
+    cleaned_text = _strip_markdown_fences(raw_text)
+    try:
+        data = json.loads(cleaned_text)
+        if not isinstance(data, dict) or "intent" not in data:
+            raise ValueError("Invalid intent response structure")
+        return data
+    except Exception as exc:
+        return {
+            "intent": "MAINTENANCE_REQUEST",
+            "confidence": 0.5,
+            "reason": f"Failed to parse intent JSON: {exc}",
+            "direct_response": "",
+        }
+
+
 
 # ===========================================================================
 # Stage 4 — Agent Execution Loop
@@ -370,9 +472,9 @@ def run_agent(goal: str, task_id: int, reporter_id: int | None = None) -> dict:
     Execute the full Campus Commander agent loop for a given goal.
 
     Architecture:
-        PLAN -> get_equipment_history -> determine_priority (Python)
-             -> create_maintenance_ticket -> notify_staff (with 1 retry)
-             -> verify_ticket -> FINAL OUTCOME
+        INTENT -> (if MAINTENANCE) -> PLAN -> get_equipment_history -> determine_priority
+               -> create_maintenance_ticket -> notify_staff -> verify_ticket -> FINAL OUTCOME
+               -> (if NON-MAINTENANCE) -> Direct response outcome (skip 5-step workflow)
 
     Parameters
     ----------
@@ -380,12 +482,13 @@ def run_agent(goal: str, task_id: int, reporter_id: int | None = None) -> dict:
         The raw natural-language user request.
     task_id : int
         Unique identifier for this agent run (used as FK in agent_events).
+    reporter_id : int, optional
+        ID of the campus reporter submitting the request.
 
     Returns
     -------
     dict
-        Final outcome with at least:
-        {"status", "ticket_id", "priority", "technician_notified", "message"}
+        Final outcome with status, ticket_id, priority, technician_notified, message, etc.
     """
     # Import here to avoid circular imports at module load time
     from tools import (
@@ -395,11 +498,10 @@ def run_agent(goal: str, task_id: int, reporter_id: int | None = None) -> dict:
         verify_ticket,
     )
 
-
     step_count = 0
     tool_call_count = 0
 
-    # Look up reporter if provided
+    # Look up reporter info immediately so it is available to ALL branches (maintenance & non-maintenance)
     reporter_info: dict | None = None
     if reporter_id is not None:
         from database import get_connection as _get_conn
@@ -415,6 +517,47 @@ def run_agent(goal: str, task_id: int, reporter_id: int | None = None) -> dict:
                     "role": row["role"],
                 }
 
+    # -----------------------------------------------------------------------
+    # PHASE 0 — Intent Classification & Branching
+    # -----------------------------------------------------------------------
+    print("[Agent] Classifying user intent...")
+    intent_result = classify_intent(goal)
+    intent = intent_result.get("intent", "MAINTENANCE_REQUEST")
+
+    _log_event(
+        None,
+        task_id,
+        "intent_classification",
+        "classify_intent",
+        "success",
+        json.dumps(intent_result),
+    )
+
+    # BRANCH: If not a maintenance request, skip the 5-step workflow entirely
+    if intent != "MAINTENANCE_REQUEST":
+        direct_msg = intent_result.get("direct_response") or (
+            "This request does not appear to be an actionable facility maintenance issue. "
+            "No ticket was created and no staff was notified."
+        )
+        print(f"[Agent] Non-maintenance intent detected ('{intent}'). Skipping 5-step workflow.")
+
+        return {
+            "status": "COMPLETED",
+            "intent": intent,
+            "ticket_id": None,
+            "priority": "N/A",
+            "technician_notified": False,
+            "reporter": reporter_info,
+            "message": direct_msg,
+            "steps_executed": 0,
+            "tool_calls_made": 0,
+            "verification": {
+                "ticket_exists": False,
+                "priority_set": False,
+                "staff_notified": False,
+            },
+        }
+
     # Accumulated state — populated as the loop executes
     history_result: dict | None = None
     priority: str = "MEDIUM"
@@ -423,9 +566,9 @@ def run_agent(goal: str, task_id: int, reporter_id: int | None = None) -> dict:
     verify_result: dict | None = None
 
     # -----------------------------------------------------------------------
-    # PHASE 0 — Planning
+    # PHASE 1 — Planning (5-Step Ticket Workflow)
     # -----------------------------------------------------------------------
-    print("[Agent] Calling get_plan()...")
+    print("[Agent] Maintenance intent confirmed. Calling get_plan()...")
     plan_data = get_plan(goal)
     extracted = plan_data["extracted"]
     steps = plan_data["plan"]
@@ -438,7 +581,7 @@ def run_agent(goal: str, task_id: int, reporter_id: int | None = None) -> dict:
     print(f"[Agent] Executing {len(steps)} steps...")
 
     # -----------------------------------------------------------------------
-    # PHASE 1 — Memory Retrieval (Contextual memory lookup)
+    # PHASE 2 — Memory Retrieval (Contextual memory lookup)
     # -----------------------------------------------------------------------
     from memory import retrieve_memories, save_memory
     retrieved_memories = retrieve_memories(room)
